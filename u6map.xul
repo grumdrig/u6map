@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="u6map.css" type="text/css"?>
+
+<window title="Ultima VI Erizer"
+        xmlns:html="http://www.w3.org/1999/xhtml"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        onload="onLoad()"
+        onunload="onUnload()"
+        >
+
+<script type="application/x-javascript" src="map.js" />
+
+<hbox>
+<grid id="map" onclick="recenter(event)"> <rows /> </grid>
+
+<!--<image src="u6tiles.png"/>-->
+</hbox>
+
+<script> <![CDATA[
+
+var viewheight = 48;
+var viewwidth = 64;
+var pos = [0,0];
+
+
+function onLoad() {
+  var rose = document.getElementById("map").firstChild;
+  for (var j = 0; j < viewheight; ++j) {
+    var row = document.createElement('row');
+    for (var i = 0; i < viewwidth; ++i) {
+      var cel = document.createElement('box');
+      row.appendChild(cel);
+    }
+    rose.appendChild(row);    
+  }
+  setpos(700,700);
+}
+
+function recenter(event) {
+  setpos(pos[0] + Math.floor(event.clientX / 16) - viewwidth / 2, 
+         pos[1] + Math.floor(event.clientY / 16) - viewheight / 2);
+}
+
+function setpos(x,y) {
+  pos[0] = (x + 1024) % 1024;
+  pos[1] = (y + 1024) % 1024;
+  for (var j = 0; j < viewheight; ++j)
+    for (var i = 0; i < viewwidth; ++i) {
+      setTile(cell(i,j), tile(i+pos[0],j+pos[1]));
+      cell(i,j).setAttribute('tooltiptext', chunk(i+pos[0], j+pos[1]));
+    }
+}
+
+function cell(x,y) {
+  var map = document.getElementById("map");
+  var row = map.firstChild.childNodes[y];
+  var cel = row.childNodes[x];
+  return cel;
+}
+
+function chunk(x,y) {
+  return map[Math.floor((y/8)%128)][Math.floor((x/8)%128)];
+}
+
+function tile(x,y) {
+  return chunks[chunk(x,y)][y % 8][x % 8];
+}
+
+function setTile(cell, index) {
+  cell.style.backgroundPosition = -16 * (index % 8) + "px " +
+                                  -16 * Math.floor(index / 8) + "px";
+}
+
+function onUnload() {
+}
+
+]]> </script>
+
+</window>
