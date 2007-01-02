@@ -1,17 +1,51 @@
 #! /usr/bin/python
 """
 Parse Ultima VI map files, and output them in some different format.
+
 Usage: parsemap.py COMMAND[...]
+
 COMMANDS:
-  writejs        Write the map data as Javascript code
-  choptiles      Chop tiles out of grid of them
-  composechunks  Print shell commands to combine tiles into 1024 chunks
-  composemap     Commands to combine the 32K chunks into a single huge image
-Prerequites:
-  Ultima VI files "chunks" and "map" are expected to be found at ./Ultima6
-  ImageMagick to compose the images
-  Image of the U6 tiles http://www.reenigne.org/computer/u6maps/u6tiles.png
+  writejs         Write the map data as Javascript code
+  choptiles       Chop tiles out of grid of them
+  composechunks   Print shell commands to combine tiles into 1024 chunks
+  composemap      Commands to combine the 32K chunks into a single huge image
+  composedungeons Commands to make images of the 5 dungeon levels
+
+PREREQUITES:
+  Ultima VI files "chunks" and "map" are expected to be found in ./Ultima6/
+  ImageMagick is needed to compose the images
+  An image of the U6 tiles http://www.reenigne.org/computer/u6maps/u6tiles.png
+
+ALSO:
+  The compose* commands generate shell commands that call
+  ImageMagick's convert to stick the tiles together, so pipe the
+  output into bash (e.g.) to actually do something
+
+  This command would generate the world and dungeon maps:
+  $ parsemap.py choptiles composechunks composemap componsedungeons | bash
+
+ABOUT THE U6 MAP:
+  The file "chunks" contains 1024 8x8 byte arrays giving tile indices.
+  These consititute the building blocks of which the map is composed.
+  
+  The file "map" contains the world map, stored as an 8x8 array of
+  16x16 arrays of indices into the set of chunks. Each index occupies
+  3 nibbles, each pair of which is stored with the nibbles permuted
+  strangely. The world map is followed by 5 dungeons, which are 32x32
+  arrays of chunk indices.
+
+  This same program should be able to decode the Savage Empire and
+  Martian Dreams maps.
+
+  There's also a bunch of objects to overlay on the map but I don't
+  know how to do that yet.
 """
+
+# Related sites
+# http://www.reenigne.org/computer/u6maps/index.html
+# http://www.graf.torun.pl/~rackne/u6like.html
+# http://ian-albert.com/misc/ultima6maps.php
+
 import os, sys, struct, getopt
 
 def readchunk(file):
@@ -19,15 +53,6 @@ def readchunk(file):
 
 def readchunks(f):
   return [readchunk(f) for chunk in range(1024)]
-
-def hi_nibble(b):
-  return b / 16
-
-def lo_nibble(b):
-  return b % 16
-
-def tri_nibble(hi, med, lo):
-  return hi * 256 + med * 16 + lo
 
 def readsuperchunkrow(f, size):
   result = []
@@ -85,6 +110,8 @@ def main():
       usage()
 
 def choptiles():
+  # u6tiles came from http://www.reenigne.org/computer/u6maps/u6tiles.png
+  print "mkdir -p tiles"
   n = 0
   for y in range(32):
     for x in range(8):
@@ -94,6 +121,7 @@ def choptiles():
 
 
 def composechunks(chunks):
+  print "mkdir -p chunks"
   n = 0
   for chunk in chunks:
     print "convert",
@@ -106,16 +134,21 @@ def composechunks(chunks):
     n += 1
 
 def composemap(map):
+  # This takes around 2GB of memory, so may cause lots of swapping and
+  # take a good long while. Final result is a 50MB 16384x16394 image
+  print "mkdir -p compositions"
   print "convert",
   for row in map:
     print "\\( +append", 
     for chunk in row:
       print "chunks/chunk%04d.png" % chunk,
     print "\\)",
-  print "-append wholebigmap.png"
+  print "-append compositions/wholebigmap.png"
 
 
 def composedungeons(dungeons):
+  # Dungeon images are around 3MB, 4096x4096
+  print "mkdir -p compositions"
   for d in range(5):
     dungeon = dungeons[d]
     print "convert",
@@ -124,17 +157,15 @@ def composedungeons(dungeons):
       for chunk in row:
         print "chunks/chunk%04d.png" % chunk,
       print "\\)",
-    print "-append dungeon%d.png" % d
+    print "-append compositions/dungeon%d.png" % d
 
 
 
 def writejs(map, dungeons, chunks):
-  '''
   print "var map = [";
   for row in map:
     print ' ', row, ','
   print '  ];'
-  '''
 
   for dungeon in range(5):
     print "var dungeon%d = [" % dungeon
@@ -142,12 +173,11 @@ def writejs(map, dungeons, chunks):
       print ' ', row, ','
     print '  ];';
 
-  '''
   print "var chunks = [",
   for chunk in chunks:
     print ' ', chunk, ','
   print "  ];";
-  '''
+
 
 if __name__ == "__main__":
   main()
