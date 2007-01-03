@@ -1,6 +1,11 @@
 box {
   height: 16px;
   width: 16px;
-  background-image: url(u6tiles.png);
-  background-position: -32px -256px;
+  background-image: url(u6tiles+objects.png);
 }
+
+/*
+box[obj] { 
+  background-image: url(u6tiles.gif);
+}
+*/

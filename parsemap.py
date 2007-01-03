@@ -45,16 +45,23 @@ ABOUT THE U6 MAP:
 # http://www.reenigne.org/computer/u6maps/index.html
 # http://www.graf.torun.pl/~rackne/u6like.html
 # http://ian-albert.com/misc/ultima6maps.php
+# http://3e8.org/pub/ultima6/u6notes.txt
+# http://3e8.org/hacks/ultima6/
 
 import os, sys, struct, getopt
 
-def readchunk(file):
-  return [list(struct.unpack('8B', file.read(8))) for row in range(8)]
+
+def readchunk(f):
+  # A chunk is an 8x8 array of tile numbers
+  return [list(struct.unpack('8B', f.read(8))) for row in range(8)]
 
 def readchunks(f):
+  # There are 1024 chunks
   return [readchunk(f) for chunk in range(1024)]
 
 def readsuperchunkrow(f, size):
+  # Each row within a superchunk is 16 or 32 3-nibble chunk indices,
+  # each adjacent pair of which have the nibbles scrabled weirdly
   result = []
   for pair in range(size / 2):
     data = struct.unpack('3B', f.read(3))  # 3 nibbles per chunk num
@@ -63,23 +70,50 @@ def readsuperchunkrow(f, size):
   return result
 
 def readsuperchunk(f):
+  # A superchunk is a 16x16 array of chunk indices
   return [readsuperchunkrow(f, 16) for row in range(16)]
 
 def readmap(f):
+  # The world map is an 8x8 array of superchunks
   return [[readsuperchunk(f) for x in range(8)]
           for y in range(8)]
 
 def readdungeon(f):
+  # Each dungeon is a 32x32 array of superchunks
   return [readsuperchunkrow(f, 32) for row in range(32)]
 
 def flattenmap(m):
+  # Convert the 8x8 array of 16x16 arrays of chunks into a single
+  # 128x128 array of chunks
   result = []
   for superrow in m:
-    for r in range(len(superrow)):
+    for r in range(len(superrow[0])):
       row = []
       for superchunk in superrow:
         row.extend(superchunk[r])
       result.append(row)
+  return result
+
+def readbasetile(f):
+  # First tile numbers for each of the 1024 game objects
+  return struct.unpack('<1024H', f.read(2048))
+
+def readobjblk(f):
+  # SAVEGAME contains one of these for each superchunk and dungeon level.
+  # Each starts with a count of entries
+  count, = struct.unpack('<H', f.read(2))
+  result = {}
+  for i in range(count):
+    # http://3e8.org/pub/ultima6/u6notes.txt
+    (status,h,d1,d2,type,quantity,quality) = struct.unpack('<4BH2B', f.read(8))
+    x = (d1 & 0x3) << 8 | h
+    y = (d2 & 0xf) << 6 | (d1 >> 2)
+    object = type & 0x3ff
+    frame = type >> 10
+    on_map = not (status & 0x10)  # else x,y aren't map coords
+    coord = y * 1024 + x
+    if 1 or on_map:
+      result.setdefault(coord, []).append([object,frame])
   return result
 
 def usage():
@@ -89,15 +123,30 @@ def usage():
 def main():
   opts,args = getopt.getopt(sys.argv[1:], '')
 
-  mapf = open('Ultima6/map', 'rb')
+  mapf = open('Ultima6/MAP', 'rb')
   map = flattenmap(readmap(mapf))
   dungeons = [readdungeon(mapf) for level in range(5)]
-  chunks = readchunks(open('Ultima6/chunks', 'rb'))
 
+  chunks = readchunks(open('Ultima6/CHUNKS', 'rb'))
+
+  basetile = readbasetile(open('Ultima6/BASETILE', 'rb'))
+
+  objblk = {}
+  for y in 'ABCDEFG':
+    for x in 'ABCDEFG':
+      objblk.update(readobjblk(open('Ultima6/SAVEGAME/OBJBLK%s%s'%(x,y),'rb')))
+  for coord in objblk:
+    objblk[coord] = [basetile[object]+frame for object,frame in objblk[coord]]
+  dungblk = [readobjblk(open('Ultima6/SAVEGAME/OBJBLK%sI'%(d), 'rb'))
+             for d in 'ABCDE']
+  for floor in dungblk:
+    for coord in floor:
+      floor[coord] = [basetile[object]+frame for object,frame in floor[coord]]
+  
   if not args: usage()
   for a in args:
     if a == 'writejs':
-      writejs(map, dungeons, chunks)
+      writejs(map, dungeons, chunks, objblk, dungblk)
     elif a == 'choptiles':
       choptiles()
     elif a == 'composechunks':
@@ -161,7 +210,7 @@ def composedungeons(dungeons):
 
 
 
-def writejs(map, dungeons, chunks):
+def writejs(map, dungeons, chunks, objblk, dungblk):
   print "var map = [";
   for row in map:
     print ' ', row, ','
@@ -178,6 +227,9 @@ def writejs(map, dungeons, chunks):
     print ' ', chunk, ','
   print "  ];";
 
+  print "var objects = ";
+  print objblk
+  print ";"
 
 if __name__ == "__main__":
   main()

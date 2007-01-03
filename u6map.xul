@@ -15,6 +15,7 @@
 
 <!--<image src="u6tiles.png"/>-->
 </hbox>
+<label id="msg" />
 
 <script> <![CDATA[
 
@@ -29,11 +30,17 @@ function onLoad() {
     var row = document.createElement('row');
     for (var i = 0; i < viewwidth; ++i) {
       var cel = document.createElement('box');
+      var obj = document.createElement('box');
+      cel.appendChild(obj);
       row.appendChild(cel);
     }
     rose.appendChild(row);    
   }
-  setpos(700,700);
+  setpos(0x134-viewwidth/2, 0x16c-viewheight/2);
+}
+
+function message(m) {
+  document.getElementById('msg').setAttribute('value', m);
 }
 
 function recenter(event) {
@@ -46,8 +53,21 @@ function setpos(x,y) {
   pos[1] = (y + 1024) % 1024;
   for (var j = 0; j < viewheight; ++j)
     for (var i = 0; i < viewwidth; ++i) {
-      setTile(cell(i,j), tile(i+pos[0],j+pos[1]));
-      cell(i,j).setAttribute('tooltiptext', chunk(i+pos[0], j+pos[1]));
+      setTile(cell(i,j), tile(i+pos[0], j+pos[1]));
+      var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
+      // while (cell(i,j).firstChild) cell(i,j).removeChild(firstChild);
+      if (objects[coord]) {
+        //var obj = document.createElement('box');
+        //cel.appendChild(obj);
+        setTile(cell(i,j).firstChild, objects[coord][0]);
+        cell(i,j).firstChild.style.display = '';
+        cell(i,j).firstChild.setAttribute('tooltiptext', objects[coord][0])
+        // setAttribute('obj', objects[coord]);
+      } else {
+        // cell(i,j).removeAttribute('obj');
+        cell(i,j).firstChild.style.display = 'none';
+        cell(i,j).firstChild.removeAttribute('tooltiptext');
+      }
     }
 }
 
@@ -66,9 +86,14 @@ function tile(x,y) {
   return chunks[chunk(x,y)][y % 8][x % 8];
 }
 
+
+// 8 for terrain tiles only
+// 32 for terrain & object tiles
+var grid_width = 32;
+
 function setTile(cell, index) {
-  cell.style.backgroundPosition = -16 * (index % 8) + "px " +
-                                  -16 * Math.floor(index / 8) + "px";
+  cell.style.backgroundPosition = -16 * (index % grid_width) + "px " +
+                                  -16 * Math.floor(index / grid_width) + "px";
 }
 
 function onUnload() {
