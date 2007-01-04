@@ -10,17 +10,28 @@
 
 <script type="application/x-javascript" src="map.js" />
 
+<spacer flex="1" />
 <hbox>
+<spacer flex="1" />
+<vbox>
+<spacer id="n" />
+<hbox>
+<spacer id="w" />
 <grid id="map" onclick="recenter(event)"> <rows /> </grid>
-
+<spacer id="e" />
 <!--<image src="u6tiles.png"/>-->
 </hbox>
-<label id="msg" />
+<spacer id="s" />
+</vbox>
+<spacer flex="1" />
+</hbox>
+<spacer flex="1" />
+<label id="msg" flex="1" />
 
 <script> <![CDATA[
 
-var viewheight = 48;
-var viewwidth = 64;
+var viewheight = 40;
+var viewwidth = 56;
 var pos = [0,0];
 
 // 8 for terrain tiles only

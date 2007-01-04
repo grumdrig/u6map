@@ -4,8 +4,16 @@ box, stack {
   background-image: url(u6tiles+objects.png);
 }
 
-/*
-box[obj] { 
-  background-image: url(u6tiles.gif);
+window { 
+/*  background-image: url(background.png);*/
 }
-*/
+
+spacer#n, spacer#s { 
+  height: 16px;
+  background-image: url(border.png);
+}
+
+spacer#e, spacer#w { 
+  width: 16px;
+  background-image: url(border.png);
+}

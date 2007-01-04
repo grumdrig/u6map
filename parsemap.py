@@ -119,6 +119,7 @@ def readobjblk(f):
       for v in range(tileflag[objtile]['vsize']):
         for h in range(tileflag[objtile]['hsize']):
           stack = result.setdefault((y-v) * 1024 + (x-h), [])
+          atile = animdata.get(tile,[tile])[0]
           if tileflag[objtile]['ontop'] or v > 0 or h > 0:
             stack.insert(0, tile)
           else:
