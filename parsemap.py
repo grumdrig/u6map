@@ -1,4 +1,5 @@
 #! /usr/bin/python
+# (c) 2007 Eric Fredricksen
 """
 Parse Ultima VI map files, and output them in some different format.
 
