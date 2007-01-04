@@ -108,20 +108,69 @@ def readobjblk(f):
     (status,h,d1,d2,type,quantity,quality) = struct.unpack('<4BH2B', f.read(8))
     x = (d1 & 0x3) << 8 | h
     y = (d2 & 0xf) << 6 | (d1 >> 2)
+    z = (d2 >> 4)
     object = type & 0x3ff
     frame = type >> 10
     on_map = not (status & 0x10)  # else x,y aren't map coords
     coord = y * 1024 + x
-    if 1 or on_map:
-      result.setdefault(coord, []).append([object,frame])
+    if on_map:
+      tile = basetile[object] + frame
+      objtile = tile
+      for v in range(tileflag[objtile]['vsize']):
+        for h in range(tileflag[objtile]['hsize']):
+          stack = result.setdefault((y-v) * 1024 + (x-h), [])
+          if tileflag[objtile]['ontop'] or v > 0 or h > 0:
+            stack.insert(0, tile)
+          else:
+            stack.append(tile)
+          tile -= 1
   return result
 
-def usage():
-  print __doc__
-  sys.exit()
+def readobjlist(f):
+  objlist = {}
+  coords = []
+  f.seek(0x100)
+  for i in range(256):
+    h, d1, d2 = struct.unpack("BBB", f.read(3))
+    x = (d1 & 0x3) << 8 | h
+    y = (d2 & 0xf) << 6 | (d1 >> 2)
+    z = (d2 >> 4)
+    coords.append(y * 1024 + x)
+  for i in range(256):
+    type, = struct.unpack("<H", f.read(2))
+    object = type & 0x3ff
+    frame = type >> 10
+    objlist.setdefault(coords[i], []).append(basetile[object]+frame)
+  return objlist
 
-def main():
-  opts,args = getopt.getopt(sys.argv[1:], '')
+def readanimdata(f):
+  count, = struct.unpack('<H', f.read(2))
+  froms = struct.unpack('<%dH' % count, f.read(2 * count))
+  tos = struct.unpack('<%dH' % count, f.read(2 * count))
+  ones = struct.unpack('<%dB' % count, f.read(count))
+  twos = struct.unpack('<%dB' % count, f.read(count))
+  return dict(zip(froms, zip(tos, ones, twos)))
+
+
+def readtileflag(f):
+  flags1 = struct.unpack('2048B', f.read(2048))
+  flags2 = struct.unpack('2048B', f.read(2048))
+  unknown = f.read(1024)
+  flags3 = struct.unpack('2048B', f.read(2048))
+  result = []
+  for f1,f2,f3 in zip(flags1, flags2, flags3):
+    result.append({
+      'passable': (f1 & 0x2) == 0,
+      'ontop': (f2 & 0x10) != 0,
+      'vsize': (f2 & 0x40) and 2 or 1,
+      'hsize': (f2 & 0x80) and 2 or 1
+      })
+  return result
+
+
+def parse_everything():
+  global map, dungeons, chunks, basetile, animdata, objblk, dungblk, objlist
+  global tileflag
 
   mapf = open('Ultima6/MAP', 'rb')
   map = flattenmap(readmap(mapf))
@@ -129,24 +178,40 @@ def main():
 
   chunks = readchunks(open('Ultima6/CHUNKS', 'rb'))
 
+  tileflag = readtileflag(open('Ultima6/TILEFLAG', 'rb'))
+
   basetile = readbasetile(open('Ultima6/BASETILE', 'rb'))
+
+  animdata = readanimdata(open('Ultima6/animdata', 'rb'))
 
   objblk = {}
   for y in 'ABCDEFG':
     for x in 'ABCDEFG':
-      objblk.update(readobjblk(open('Ultima6/SAVEGAME/OBJBLK%s%s'%(x,y),'rb')))
-  for coord in objblk:
-    objblk[coord] = [basetile[object]+frame for object,frame in objblk[coord]]
+      blk = readobjblk(open('Ultima6/SAVEGAME/OBJBLK%s%s'%(x,y),'rb'))
+      for key,value in blk.iteritems():
+        objblk.setdefault(key,[]).extend(value)
   dungblk = [readobjblk(open('Ultima6/SAVEGAME/OBJBLK%sI'%(d), 'rb'))
              for d in 'ABCDE']
-  for floor in dungblk:
-    for coord in floor:
-      floor[coord] = [basetile[object]+frame for object,frame in floor[coord]]
+  objlist = readobjlist(open('Ultima6/SAVEGAME/OBJLIST', 'rb'))
+  for key,value in objlist.iteritems():
+    objblk.setdefault(key,[])[:0] = value
+    
+
+
+def usage():
+  print __doc__
+  sys.exit()
+
+
+def main():
+  opts,args = getopt.getopt(sys.argv[1:], '')
+
+  parse_everything()
   
-  if not args: usage()
+  if not args: print "for usage use", sys.argv[0], "help"
   for a in args:
     if a == 'writejs':
-      writejs(map, dungeons, chunks, objblk, dungblk)
+      writejs()
     elif a == 'choptiles':
       choptiles()
     elif a == 'composechunks':
@@ -165,6 +230,13 @@ def choptiles():
   for y in range(32):
     for x in range(8):
       print 'convert -crop 16x16+%d+%d u6tiles.png tiles/tile%03d.png' % \
+            (x*16, y*16, n)
+      n += 1
+  print "mkdir -p otiles"
+  n = 0
+  for y in range(64):
+    for x in range(32):
+      print 'convert -crop 16x16+%d+%d u6tiles+objects.png otiles/tile%03d.png' % \
             (x*16, y*16, n)
       n += 1
 
@@ -210,7 +282,7 @@ def composedungeons(dungeons):
 
 
 
-def writejs(map, dungeons, chunks, objblk, dungblk):
+def writejs():
   print "var map = [";
   for row in map:
     print ' ', row, ','
@@ -227,9 +299,10 @@ def writejs(map, dungeons, chunks, objblk, dungblk):
     print ' ', chunk, ','
   print "  ];";
 
-  print "var objects = ";
-  print objblk
-  print ";"
+  print "var objects = {";
+  for k in objblk.keys():
+    print k, ':', objblk[k], ','
+  print "  };"
 
 if __name__ == "__main__":
   main()

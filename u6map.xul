@@ -23,15 +23,17 @@ var viewheight = 48;
 var viewwidth = 64;
 var pos = [0,0];
 
+// 8 for terrain tiles only
+// 32 for terrain & object tiles
+var grid_width = 32;
+
 
 function onLoad() {
   var rose = document.getElementById("map").firstChild;
   for (var j = 0; j < viewheight; ++j) {
     var row = document.createElement('row');
     for (var i = 0; i < viewwidth; ++i) {
-      var cel = document.createElement('box');
-      var obj = document.createElement('box');
-      cel.appendChild(obj);
+      var cel = document.createElement('stack');
       row.appendChild(cel);
     }
     rose.appendChild(row);    
@@ -55,18 +57,13 @@ function setpos(x,y) {
     for (var i = 0; i < viewwidth; ++i) {
       setTile(cell(i,j), tile(i+pos[0], j+pos[1]));
       var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
-      // while (cell(i,j).firstChild) cell(i,j).removeChild(firstChild);
-      if (objects[coord]) {
-        //var obj = document.createElement('box');
-        //cel.appendChild(obj);
-        setTile(cell(i,j).firstChild, objects[coord][0]);
-        cell(i,j).firstChild.style.display = '';
-        cell(i,j).firstChild.setAttribute('tooltiptext', objects[coord][0])
-        // setAttribute('obj', objects[coord]);
-      } else {
-        // cell(i,j).removeAttribute('obj');
-        cell(i,j).firstChild.style.display = 'none';
-        cell(i,j).firstChild.removeAttribute('tooltiptext');
+      while (cell(i,j).firstChild) cell(i,j).removeChild(cell(i,j).firstChild);
+      if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o) {
+        var obj = document.createElement('box');
+        setTile(obj, objects[coord][o]);
+        if (o == 0)
+          obj.setAttribute('tooltiptext', (i+pos[0]) + ',' + (j+pos[1]) + ' ' + objects[coord])
+        cell(i,j).appendChild(obj);
       }
     }
 }
@@ -86,10 +83,6 @@ function tile(x,y) {
   return chunks[chunk(x,y)][y % 8][x % 8];
 }
 
-
-// 8 for terrain tiles only
-// 32 for terrain & object tiles
-var grid_width = 32;
 
 function setTile(cell, index) {
   cell.style.backgroundPosition = -16 * (index % grid_width) + "px " +
