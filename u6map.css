@@ -6,8 +6,11 @@ box, stack {
 
 window { 
 /*  background-image: url(background.png);*/
+  background-color: black;
+  /* background-color: #fcf4c0; */
 }
 
+/*
 spacer#n, spacer#s { 
   height: 16px;
   background-image: url(border.png);
@@ -17,3 +20,5 @@ spacer#e, spacer#w {
   width: 16px;
   background-image: url(border.png);
 }
+*/
+

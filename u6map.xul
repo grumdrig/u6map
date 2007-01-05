@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet href="u6map.css" type="text/css"?>
 
-<window title="Ultima VI Erizer"
+<window title="Ultima Sixerizer"
         xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         onload="onLoad()"
@@ -13,6 +13,7 @@
 <spacer flex="1" />
 
 <hbox>
+  <spacer flex="1" />
 <vbox>
   <image src="minimap.jpg" onclick="minicenter(this,event)"/> 
   <spacer flex="1" />
@@ -22,17 +23,16 @@
 <spacer id="n" />
 <hbox>
 <spacer id="w" />
-<grid id="map" onclick="recenter(event)"> <rows /> </grid>
+<grid id="map" onclick="recenter(this, event)"> <rows /> </grid>
 <spacer id="e" />
 <!--<image src="u6tiles.png"/>-->
 </hbox>
 <spacer id="s" />
 </vbox>
-<spacer flex="2" />
+<spacer flex="4" />
 </hbox>
 <spacer flex="1" />
 <label id="msg" flex="1" />
-
 
 <script> <![CDATA[
 
@@ -62,9 +62,11 @@ function message(m) {
   document.getElementById('msg').setAttribute('value', m);
 }
 
-function recenter(event) {
-  setpos(pos[0] + Math.floor(event.clientX / 16) - viewwidth / 2, 
-         pos[1] + Math.floor(event.clientY / 16) - viewheight / 2);
+function recenter(sender, event) {
+  setpos(pos[0] + Math.floor((event.clientX - sender.boxObject.x) / 16) -
+           viewwidth / 2, 
+         pos[1] + Math.floor((event.clientY - sender.boxObject.y) / 16) -
+           viewheight / 2);
 }
 
 function minicenter(sender, event) {
@@ -85,6 +87,37 @@ function setpos(x,y) {
         setTile(obj, objects[coord][o]);
         if (o == 0)
           obj.setAttribute('tooltiptext', (i+pos[0]) + ',' + (j+pos[1]) + ' ' + objects[coord])
+        cell(i,j).appendChild(obj);
+      }
+      // Fade to black 
+      var d = 0;
+      if (i == 2 || j == 2 || i == viewwidth-3 || j == viewheight-3) d = 447;
+      if (i == 1 || j == 1 || i == viewwidth-2 || j == viewheight-2) d = 446;
+      if (i == 0 || j == 0 || i == viewwidth-1 || j == viewheight-1) d = 445;
+      if (d) {
+        var obj = document.createElement('box');
+        setTile(obj, d);
+        cell(i,j).appendChild(obj);
+      }
+      /*
+      // Fade to moldy old paper (which doesn't quite work...
+      d = 0;
+      if (j == 0) {
+        if (i == 0) d = 432;
+        else if (i < viewwidth - 1) d = 433;
+        else d = 434;
+      } else if (j == viewheight - 1) {
+        if (i == 0) d = 435;
+        else if (i < viewwidth - 1) d = 436;
+        else d = 437;
+      } else {
+        if (i == 0) d = 438;
+        else if (i == viewwidth - 1) d = 439;
+      }
+      */
+      if (d) {
+        var obj = document.createElement('box');
+        setTile(obj, d);
         cell(i,j).appendChild(obj);
       }
     }

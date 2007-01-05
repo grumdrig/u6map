@@ -42,6 +42,8 @@ ABOUT THE U6 MAP:
   know how to do that yet.
 """
 
+# TODO: items in containers, esp. eggs not handled right
+
 # Related sites
 # http://www.reenigne.org/computer/u6maps/index.html
 # http://www.graf.torun.pl/~rackne/u6like.html
