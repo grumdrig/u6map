@@ -10,13 +10,31 @@
 
 <script type="application/x-javascript" src="map.js" />
 
-<spacer flex="1" />
+<grid flex="1">
+  <columns> <column /> <column flex="1" /> <column /> </columns>
+  <rows>
+    <row>
+      <image src="corner_tl.gif" />
+      <hbox style="background-image: url(side_t.gif)" />
+      <image src="corner_tr.gif" />
+    </row> <row flex="1">
+      <vbox style="background-image: url(side_l.gif)" />
+
+<vbox pack="center">
 
 <hbox>
   <spacer flex="1" />
-<vbox>
+<vbox align="center">
   <image src="minimap.jpg" onclick="minicenter(this,event)"/> 
   <spacer flex="1" />
+<!--
+  <box style="width: 32px; background-position: -256px -176px" />
+  <box style="width: 32px; background-position: -288px -176px" />
+  <spacer flex="1" />
+  <box style="width: 48px; background-position: -368px -864px" />
+  <box style="width: 48px; background-position: -416px -864px" />
+  <box style="width: 48px; background-position: -464px -864px" />
+-->
 </vbox>
 <spacer flex="1" />
 <vbox>
@@ -25,14 +43,23 @@
 <spacer id="w" />
 <grid id="map" onclick="recenter(this, event)"> <rows /> </grid>
 <spacer id="e" />
-<!--<image src="u6tiles.png"/>-->
 </hbox>
 <spacer id="s" />
 </vbox>
 <spacer flex="4" />
 </hbox>
-<spacer flex="1" />
-<label id="msg" flex="1" />
+
+</vbox>
+
+     <vbox style="background-image: url(side_r.gif)" />
+   </row> <row>
+     <image src="corner_bl.gif" />
+     <hbox style="background-image: url(side_b.gif)" />
+     <image src="corner_br.gif" />
+    </row>
+  </rows>
+</grid>
+
 
 <script> <![CDATA[
 
@@ -89,17 +116,13 @@ function setpos(x,y) {
           obj.setAttribute('tooltiptext', (i+pos[0]) + ',' + (j+pos[1]) + ' ' + objects[coord])
         cell(i,j).appendChild(obj);
       }
+      /*
       // Fade to black 
       var d = 0;
       if (i == 2 || j == 2 || i == viewwidth-3 || j == viewheight-3) d = 447;
       if (i == 1 || j == 1 || i == viewwidth-2 || j == viewheight-2) d = 446;
       if (i == 0 || j == 0 || i == viewwidth-1 || j == viewheight-1) d = 445;
-      if (d) {
-        var obj = document.createElement('box');
-        setTile(obj, d);
-        cell(i,j).appendChild(obj);
-      }
-      /*
+      */
       // Fade to moldy old paper (which doesn't quite work...
       d = 0;
       if (j == 0) {
@@ -114,7 +137,7 @@ function setpos(x,y) {
         if (i == 0) d = 438;
         else if (i == viewwidth - 1) d = 439;
       }
-      */
+
       if (d) {
         var obj = document.createElement('box');
         setTile(obj, d);

@@ -6,8 +6,11 @@ box, stack {
 
 window { 
 /*  background-image: url(background.png);*/
-  background-color: black;
-  /* background-color: #fcf4c0; */
+  /*background-color: black;*/
+}
+
+window > grid { 
+  background-color: #fcf4c0; 
 }
 
 /*
