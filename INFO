@@ -1,0 +1,13 @@
+NAME: u6map
+
+DESCRIPTION: Web rendering of the map from Ultima VI
+
+CATEGORY: graphics
+
+STATUS: complete
+
+LANGUAGE: XUL JavaScript
+
+TAGS: Ultima map RPG
+
+MAIN: u6map.xul
