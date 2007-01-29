@@ -4,7 +4,7 @@ DESCRIPTION: Web rendering of the map from Ultima VI
 
 CATEGORY: graphics
 
-STATUS: complete
+STATUS: working
 
 LANGUAGE: XUL JavaScript
 
