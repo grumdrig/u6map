@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>Ultima Sixerizer</title>
+<style>
+/* Reset */
+* { margin:0px; padding:0px; } 
+body { font-family: Verdana, Arial, sans-serif; font-size:12px;  }
+p { padding-bottom:5px; line-height:1.4em; }
+ul, ol { margin-left: 10px; }
+li  { margin-left:10px; padding-left:10px; }
+a img { border:0px; } 
+a, a:active { outline: none; }  
+.clear { clear:both; }
+
+body > table { 
+  background-color: #fcf4c0; 
+}
+
+</style>
+
+<script type="application/x-javascript" src="map.js"></script>
+</head>
+
+<body onload="onLoad()" onunload="onUnload()">
+
+<table>
+<tr>
+  <td><img src="corner_tl.gif">_
+  <td><span style="background: url(side_t.gif)"></span>_
+  <td><img src="corner_tr.gif">_
+</tr>
+
+<tr>
+<td><div style="background: url(side_l.gif)"></div>_
+<td>
+  <img src="minimap.jpg" onclick="minicenter(this,event)"> 
+  <canvas id="can" width=896 height=640 onclick="recenter(this, event)">
+    </canvas>
+<td><div style="background: url(side_r.gif)"></div>_
+</tr> 
+
+
+<tr>
+<td><img src="corner_bl.gif">_
+<td style="background: url(side_b.gif)">_
+<td><img src="corner_br.gif">_
+</tr>
+
+</table>
+
+
+<img src="u6tiles+objects.png" id="tiles" style="display:none">
+
+<script>
+
+var viewheight = 40;
+var viewwidth = 56;
+var pos = [0,0]; // tile coordinates
+
+// 8 for terrain tiles only
+// 32 for terrain & object tiles
+var grid_width = 32;
+
+
+function onLoad() {
+  setpos(0x134-viewwidth/2, 0x16c-viewheight/2);
+}
+
+function recenter(sender, event) {
+  setpos(pos[0] + Math.floor(event.clientX / 16) - viewwidth/2, 
+         pos[1] + Math.floor(event.clientY / 16) - viewheight/2);
+}
+
+function minicenter(sender, event) {
+  alert(event.clientX);
+  setpos(Math.floor(event.clientX * 1024 / 96), 
+         Math.floor(event.clientY * 1024 / 96));
+}
+
+function render(con, i, j, index) {
+  con.drawImage(tiles,
+                16 * (index % grid_width), 
+                16 * Math.floor(index / grid_width),
+                16, 16,
+                i*16, j*16, 16, 16);
+}
+
+function setpos(x,y) {
+  var con = can.getContext("2d");
+  pos[0] = (x + 1024) % 1024;
+  pos[1] = (y + 1024) % 1024;
+  for (var j = 0; j < viewheight; ++j)
+    for (var i = 0; i < viewwidth; ++i) {
+      render(con, i, j, tile(i+pos[0], j+pos[1])); 
+
+
+      var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
+      if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o) {
+        render(con, i, j, objects[coord][o]);
+        if (o == 0)
+          can.setAttribute("alt", 
+                           (i+pos[0]) + ',' + 
+                           (j+pos[1]) + ' ' + objects[coord]);
+      }
+
+      // Fade to black 
+      var d = 0;
+      if (i == 2 || j == 2 || i == viewwidth-3 || j == viewheight-3) d = 447;
+      if (i == 1 || j == 1 || i == viewwidth-2 || j == viewheight-2) d = 446;
+      if (i == 0 || j == 0 || i == viewwidth-1 || j == viewheight-1) d = 445;
+
+/*
+      // Fade to moldy old paper (which doesn't quite work...
+      d = 0;
+      if (j == 0) {
+        if (i == 0) d = 432;
+        else if (i < viewwidth - 1) d = 433;
+        else d = 434;
+      } else if (j == viewheight - 1) {
+        if (i == 0) d = 435;
+        else if (i < viewwidth - 1) d = 436;
+        else d = 437;
+      } else {
+        if (i == 0) d = 438;
+        else if (i == viewwidth - 1) d = 439;
+      }
+*/
+      if (d) {
+        render(con, i, j, d);
+      }
+    }
+}
+
+function chunk(x,y) {
+  return map[Math.floor((y/8)%128)][Math.floor((x/8)%128)];
+}
+
+function tile(x,y) {
+  return chunks[chunk(x,y)][y % 8][x % 8];
+}
+
+
+var can = document.getElementById("can");
+var tiles = document.getElementById("tiles");
+
+function onUnload() {
+}
+
+</script>
+
+</body>
+</html>
