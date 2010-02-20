@@ -6,7 +6,7 @@
 <style>
 /* Reset */
 * { margin:0px; padding:0px; } 
-body { font-family: Verdana, Arial, sans-serif; font-size:12px;  }
+body { font-family: Georgia, serif ; font-size:18px;  }
 a img { border:0px; } 
 a, a:active { outline: none; }  
 .clear { clear:both; }
@@ -43,13 +43,19 @@ body {
     <canvas 
        id="can" 
        width="896" height="640" 
-       onclick="recenter(this, event)">
-    </canvas>
-    <img 
-       src="minimap.jpg" 
-       onclick="minicenter(this,event)" 
-       style="vertical-align:top">
-  <td style="background: url(side_r.gif)">
+       onclick="recenter(this, event)"
+       onmousemove="mouseover(event)"
+       >
+    </canvas>&nbsp;
+    <div style="display:inline-block; vertical-align:top">
+      Ultima VI
+      <br>
+      <img 
+         src="minimap.jpg" 
+         onclick="minicenter(this,event)"/>
+      <p id="pos">
+      </div>
+    <td style="background: url(side_r.gif)">
 </tr> 
 
 
@@ -103,6 +109,20 @@ function minicenter(sender, event) {
          Math.floor(event.offsetY * 1024 / 96 - viewheight/2));
 }
 
+function mouseover(event) {
+  event.calcOffset();
+  var i = (pos[0] + Math.floor(event.offsetX / 16)) % 1024;
+  var j = (pos[1] + Math.floor(event.offsetY / 16)) % 1024;
+  var p = i + ", " + j + "<br>" + tile(i,j) + "<br>";
+
+  var coord = i + j * 1024;
+  if (objects[coord]) 
+    for (var o = 0; o < objects[coord].length; ++o)
+      p += "<br>" + objects[coord][o];
+
+  document.getElementById("pos").innerHTML = p;
+}
+
 function render(con, i, j, index) {
   con.drawImage(tiles,
                 16 * (index % grid_width), 
@@ -121,13 +141,8 @@ function setpos(x,y) {
 
 
       var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
-      if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o) {
+      if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o)
         render(con, i, j, objects[coord][o]);
-        if (o == 0)
-          can.setAttribute("alt", 
-                           (i+pos[0]) + ',' + 
-                           (j+pos[1]) + ' ' + objects[coord]);
-      }
 
 /*
       // Fade to black 
