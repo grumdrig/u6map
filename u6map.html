@@ -7,9 +7,9 @@
 /* Reset */
 * { margin:0px; padding:0px; } 
 body { font-family: Georgia, serif ; font-size:18px;  }
+p { padding-bottom:5px; line-height:1.4em; }
 a img { border:0px; } 
 a, a:active { outline: none; }  
-.clear { clear:both; }
 
 table { 
   background-color: #fcf4c0;
@@ -19,6 +19,10 @@ table {
 body {
   background-color: black;
   margin: 1ex;
+}
+
+.tile {
+  background: url(u6tiles+objects.png);
 }
 
 </style>
@@ -109,16 +113,24 @@ function minicenter(sender, event) {
          Math.floor(event.offsetY * 1024 / 96 - viewheight/2));
 }
 
+function tileimage(index) {
+  return "<canvas width=16 height=16 class=tile style='background-position:-" + (16 * (index % grid_width)) + "px -" + (16 * Math.floor(index / grid_width)) + "px'></canvas>";
+}
+
+
 function mouseover(event) {
   event.calcOffset();
   var i = (pos[0] + Math.floor(event.offsetX / 16)) % 1024;
   var j = (pos[1] + Math.floor(event.offsetY / 16)) % 1024;
-  var p = i + ", " + j + "<br>" + tile(i,j) + "<br>";
+  var p = i + ", " + j;
+  var index = tile(i,j);
+  p += "<br><br><p align=left>" + tileimage(index) + " " + index;
+  p += "<p align=left>";
 
   var coord = i + j * 1024;
   if (objects[coord]) 
     for (var o = 0; o < objects[coord].length; ++o)
-      p += "<br>" + objects[coord][o];
+      p += "<br>" + tileimage(objects[coord][o]) + " " + objects[coord][o];
 
   document.getElementById("pos").innerHTML = p;
 }
