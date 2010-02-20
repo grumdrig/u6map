@@ -1,1 +1,0 @@
-<? header("Location: http://grumdrig.com/u6map/u6map.xul") ?>
