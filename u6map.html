@@ -7,15 +7,18 @@
 /* Reset */
 * { margin:0px; padding:0px; } 
 body { font-family: Verdana, Arial, sans-serif; font-size:12px;  }
-p { padding-bottom:5px; line-height:1.4em; }
-ul, ol { margin-left: 10px; }
-li  { margin-left:10px; padding-left:10px; }
 a img { border:0px; } 
 a, a:active { outline: none; }  
 .clear { clear:both; }
 
-body > table { 
-  background-color: #fcf4c0; 
+table { 
+  background-color: #fcf4c0;
+  text-align: center;
+}
+
+body {
+  background-color: black;
+  margin: 1ex;
 }
 
 </style>
@@ -25,31 +28,40 @@ body > table {
 
 <body onload="onLoad()" onunload="onUnload()">
 
-<table>
+<div align=center>
+
+<table cellspacing=0 colspacing=0>
 <tr>
-  <td><img src="corner_tl.gif">_
-  <td><span style="background: url(side_t.gif)"></span>_
-  <td><img src="corner_tr.gif">_
+  <td><img src="corner_tl.gif">
+  <td style="background: url(side_t.gif)"><img src="side_t.gif">
+  <td><img src="corner_tr.gif">
 </tr>
 
 <tr>
-<td><div style="background: url(side_l.gif)"></div>_
-<td>
-  <img src="minimap.jpg" onclick="minicenter(this,event)"> 
-  <canvas id="can" width=896 height=640 onclick="recenter(this, event)">
+  <td style="background: url(side_l.gif)">
+  <td>
+    <canvas 
+       id="can" 
+       width="896" height="640" 
+       onclick="recenter(this, event)">
     </canvas>
-<td><div style="background: url(side_r.gif)"></div>_
+    <img 
+       src="minimap.jpg" 
+       onclick="minicenter(this,event)" 
+       style="vertical-align:top">
+  <td style="background: url(side_r.gif)">
 </tr> 
 
 
 <tr>
-<td><img src="corner_bl.gif">_
-<td style="background: url(side_b.gif)">_
-<td><img src="corner_br.gif">_
+  <td><img src="corner_bl.gif">
+  <td style="background: url(side_b.gif)"><img src="side_b.gif">
+  <td><img src="corner_br.gif">
 </tr>
 
 </table>
 
+</div>
 
 <img src="u6tiles+objects.png" id="tiles" style="display:none">
 
@@ -68,15 +80,27 @@ function onLoad() {
   setpos(0x134-viewwidth/2, 0x16c-viewheight/2);
 }
 
+MouseEvent.prototype.calcOffset = function () {
+  if (typeof this.offsetX == "undefined") {
+    this.offsetX = this.clientX, this.offsetY = this.clientY;
+    var obj = this.target;
+    do {
+      this.offsetX -= obj.offsetLeft;
+      this.offsetY -= obj.offsetTop;
+    } while ((obj = obj.offsetParent));
+  }
+}
+  
 function recenter(sender, event) {
-  setpos(pos[0] + Math.floor(event.clientX / 16) - viewwidth/2, 
-         pos[1] + Math.floor(event.clientY / 16) - viewheight/2);
+  event.calcOffset();
+  setpos(pos[0] + Math.floor(event.offsetX / 16) - viewwidth/2, 
+         pos[1] + Math.floor(event.offsetY / 16) - viewheight/2);
 }
 
 function minicenter(sender, event) {
-  alert(event.clientX);
-  setpos(Math.floor(event.clientX * 1024 / 96), 
-         Math.floor(event.clientY * 1024 / 96));
+  event.calcOffset();
+  setpos(Math.floor(event.offsetX * 1024 / 96 - viewwidth/2), 
+         Math.floor(event.offsetY * 1024 / 96 - viewheight/2));
 }
 
 function render(con, i, j, index) {
@@ -105,13 +129,14 @@ function setpos(x,y) {
                            (j+pos[1]) + ' ' + objects[coord]);
       }
 
+/*
       // Fade to black 
       var d = 0;
       if (i == 2 || j == 2 || i == viewwidth-3 || j == viewheight-3) d = 447;
       if (i == 1 || j == 1 || i == viewwidth-2 || j == viewheight-2) d = 446;
       if (i == 0 || j == 0 || i == viewwidth-1 || j == viewheight-1) d = 445;
 
-/*
+*/
       // Fade to moldy old paper (which doesn't quite work...
       d = 0;
       if (j == 0) {
@@ -126,7 +151,7 @@ function setpos(x,y) {
         if (i == 0) d = 438;
         else if (i == viewwidth - 1) d = 439;
       }
-*/
+
       if (d) {
         render(con, i, j, d);
       }
