@@ -77,8 +77,13 @@ body {
 
 <script>
 
-var viewheight = 40;
-var viewwidth = 56;
+var can = document.getElementById("can");
+var tiles = document.getElementById("tiles");
+var scale = 2;
+var tiledim = 16;
+var dtiledim = tiledim * scale;
+var viewheight = can.height / dtiledim;
+var viewwidth = can.width / dtiledim;
 var pos = [0,0]; // tile coordinates
 
 // 8 for terrain tiles only
@@ -87,7 +92,9 @@ var grid_width = 32;
 
 
 function onLoad() {
-  setpos(0x134-viewwidth/2, 0x16c-viewheight/2);
+  //setpos(0x134-viewwidth/2, 0x16c-viewheight/2);
+  setpos(307-viewwidth/2, 352-viewheight/2);  // Where the Avatar stands
+  window.setInterval(renderMap, 65);
 }
 
 MouseEvent.prototype.calcOffset = function () {
@@ -103,8 +110,8 @@ MouseEvent.prototype.calcOffset = function () {
   
 function recenter(sender, event) {
   event.calcOffset();
-  setpos(pos[0] + Math.floor(event.offsetX / 16) - viewwidth/2, 
-         pos[1] + Math.floor(event.offsetY / 16) - viewheight/2);
+  setpos(pos[0] + Math.floor(event.offsetX / dtiledim) - viewwidth/2, 
+         pos[1] + Math.floor(event.offsetY / dtiledim) - viewheight/2);
 }
 
 function minicenter(sender, event) {
@@ -114,9 +121,9 @@ function minicenter(sender, event) {
 }
 
 function tileimage(index) {
-  return "<canvas width=16 height=16 class=tile " + 
-         "style='background-position:-" + (16 * (index % grid_width)) + "px -"+
-         (16 * Math.floor(index / grid_width)) + "px'></canvas> " + 
+  return "<canvas width=" + tiledim + " height=" + tiledim + " class=tile " + 
+         "style='background-position:-" + (tiledim * (index % grid_width)) + "px -"+
+         (tiledim * Math.floor(index / grid_width)) + "px'></canvas> " + 
          index + (tileflag[index].passable ? "" : " X") + 
          (tileflag[index].ontop ? " T" : ""); 
 }
@@ -124,8 +131,8 @@ function tileimage(index) {
 
 function mouseover(event) {
   event.calcOffset();
-  var i = (pos[0] + Math.floor(event.offsetX / 16)) % 1024;
-  var j = (pos[1] + Math.floor(event.offsetY / 16)) % 1024;
+  var i = (pos[0] + Math.floor(event.offsetX / dtiledim)) % 1024;
+  var j = (pos[1] + Math.floor(event.offsetY / dtiledim)) % 1024;
   var p = i + ", " + j;
   var index = tile(i,j);
   p += "<br><br><p align=left>" + tileimage(index);
@@ -141,33 +148,38 @@ function mouseover(event) {
 
 function render(con, i, j, index) {
   con.drawImage(tiles,
-                16 * (index % grid_width), 
-                16 * Math.floor(index / grid_width),
-                16, 16,
-                i*16, j*16, 16, 16);
+                tiledim * (index % grid_width), 
+                tiledim * Math.floor(index / grid_width),
+                tiledim, tiledim,
+                i*dtiledim, j*dtiledim, dtiledim, dtiledim);
 }
 
 function setpos(x,y) {
-  var con = can.getContext("2d");
   pos[0] = (x + 1024) % 1024;
   pos[1] = (y + 1024) % 1024;
-  for (var j = 0; j < viewheight; ++j)
+  renderMap(true);
+}
+
+function renderMap(evenIfNotAnimated) {
+  if (!evenIfNotAnimated) return;   // stub out for now
+
+  var con = can.getContext("2d");
+  for (var j = 0; j < viewheight; ++j) {
     for (var i = 0; i < viewwidth; ++i) {
       render(con, i, j, tile(i+pos[0], j+pos[1])); 
 
-
       var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
+
       if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o)
         render(con, i, j, objects[coord][o]);
-
 /*
       // Fade to black 
       var d = 0;
       if (i == 2 || j == 2 || i == viewwidth-3 || j == viewheight-3) d = 447;
       if (i == 1 || j == 1 || i == viewwidth-2 || j == viewheight-2) d = 446;
       if (i == 0 || j == 0 || i == viewwidth-1 || j == viewheight-1) d = 445;
-
 */
+
       // Fade to moldy old paper (which doesn't quite work...
       d = 0;
       if (j == 0) {
@@ -187,6 +199,7 @@ function setpos(x,y) {
         render(con, i, j, d);
       }
     }
+  }
 }
 
 function chunk(x,y) {
@@ -196,10 +209,6 @@ function chunk(x,y) {
 function tile(x,y) {
   return chunks[chunk(x,y)][y % 8][x % 8];
 }
-
-
-var can = document.getElementById("can");
-var tiles = document.getElementById("tiles");
 
 function onUnload() {
 }

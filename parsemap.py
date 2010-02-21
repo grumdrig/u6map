@@ -151,11 +151,11 @@ def readobjlist(f):
 
 def readanimdata(f):
   count, = struct.unpack('<H', f.read(2))
-  froms = struct.unpack('<%dH' % count, f.read(2 * count))
-  tos = struct.unpack('<%dH' % count, f.read(2 * count))
-  ones = struct.unpack('<%dB' % count, f.read(count))
-  twos = struct.unpack('<%dB' % count, f.read(count))
-  return dict(zip(froms, zip(tos, ones, twos)))
+  tiles = struct.unpack('<%dH' % count, f.read(2 * count))
+  firsts = struct.unpack('<%dH' % count, f.read(2 * count))
+  masks = struct.unpack('<%dB' % count, f.read(count))
+  shifts = struct.unpack('<%dB' % count, f.read(count))
+  return dict(zip(tiless, zip(firsts, masks, shifts)))
 
 
 def readtileflag(f):
