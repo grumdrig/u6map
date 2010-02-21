@@ -1,0 +1,54 @@
+<body onload="onLoad()">
+
+<img src="u6tiles+objects.png" id="tiles">
+
+<style>
+
+.tile {
+  background: url(u6tiles+objects.png);
+}
+
+td {
+  text-align: left;
+}
+</style>
+
+
+<script type="application/x-javascript" src="map.js"></script>
+<div id=extra></div>
+
+<script>
+// 8 for terrain tiles only
+// 32 for terrain & object tiles
+var grid_width = 32;
+
+
+function tileimage(index) {
+  return "<canvas width=16 height=16 class=tile " + 
+         "style='background-position:-" + (16 * (index % grid_width)) + "px -"+
+         (16 * Math.floor(index / grid_width)) + "px'></canvas> " + 
+         index + (tileflag[index].passable ? "" : " X") + 
+         (tileflag[index].ontop ? " T" : ""); 
+}
+
+function onLoad() {
+  var p = "<table><tr><th colspan=3>animdata";
+  for (var i in animdata) {
+    p += "<tr><td>" + tileimage(i) + "<td>" +
+         tileimage(animdata[i][0]) + "<td>" + animdata[i];
+    for (var k = 0; k < 8; ++k) p += "<td>"+tileimage(animdata[i][0] + k);
+  }
+  p += "</table>";
+
+  p += "<table><tr><th>object<th>count";
+  var histogram = {};
+  for (var i in objects) 
+    for (var n = 0; n < objects[i].length; ++n)
+      histogram[objects[i][n]] = (histogram[objects[i][n]] || 0) + 1;
+  for (var i in histogram)
+    p += "<tr><td>" + tileimage(i) + "<td>" + histogram[i];
+  p += "</table>";
+
+  document.getElementById("extra").innerHTML = p;
+}
+</script>

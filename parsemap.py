@@ -14,7 +14,10 @@ COMMANDS:
 
 PREREQUITES:
   Ultima VI files "chunks" and "map" are expected to be found in ./Ultima6/
+  http://www.abandonia.com/en/games/95/Ultima+VI+-+The+False+Prophet.html
+  
   ImageMagick is needed to compose the images
+
   An image of the U6 tiles http://www.reenigne.org/computer/u6maps/u6tiles.png
 
 ALSO:
@@ -38,8 +41,7 @@ ABOUT THE U6 MAP:
   This same program should be able to decode the Savage Empire and
   Martian Dreams maps.
 
-  There's also a bunch of objects to overlay on the map but I don't
-  know how to do that yet.
+  There's also a bunch of objects to overlay on the map in "savegame/obj*"..
 """
 
 # TODO: items in containers, esp. eggs not handled right
@@ -159,15 +161,32 @@ def readanimdata(f):
 def readtileflag(f):
   flags1 = struct.unpack('2048B', f.read(2048))
   flags2 = struct.unpack('2048B', f.read(2048))
-  unknown = f.read(1024)
+  weights = f.read(1024)  # opaque at the moment
   flags3 = struct.unpack('2048B', f.read(2048))
   result = []
   for f1,f2,f3 in zip(flags1, flags2, flags3):
     result.append({
-      'passable': (f1 & 0x2) == 0,
+      'wet': (f1 & 0x1) != 0,
+      'impassable': (f1 & 0x2) != 0,
+      'wall': (f1 & 0x4) != 0,
+      'damaging': (f1 & 0x8) != 0,
+      'sides': (((f1 & 0x10) and 'w' or '') +
+                ((f1 & 0x20) and 's' or '') +
+                ((f1 & 0x40) and 'e' or '') +
+                ((f1 & 0x80) and 'n' or '')),
+      'light': (f2 & 0x3),
+      'boundary': (f2 & 0x4) != 0,
+      'lookthuboundary': (f2 & 0x8) != 0,
       'ontop': (f2 & 0x10) != 0,
+      'noshootthru': (f2 & 0x20) != 0,
       'vsize': (f2 & 0x40) and 2 or 1,
-      'hsize': (f2 & 0x80) and 2 or 1
+      'hsize': (f2 & 0x80) and 2 or 1,
+      'warm': (f3 & 0x1) != 0,  # infravisible
+      'support': (f3 & 0x2) != 0,  # e.g. a table; can have things on it
+      'breakthruable': (f3 & 0x4) != 0,
+      'ignore': (f3 & 0x10) != 0,  # e.g. shadow
+      'background': (f3 & 0x20) != 0,  # solid areas
+      'article': ['', 'a', 'an', 'the'][f3 >> 6]
       })
   return result
 
@@ -307,6 +326,23 @@ def writejs():
   for k in objblk.keys():
     print k, ':', objblk[k], ','
   print "  };"
+
+  print "var animdata = {";
+  for k,v in animdata.items():
+    print k, ":", list(v), ","
+  print "};"
+
+  def reflag(t):
+    r = '{'
+    if not t['impassable']:
+      r = r + 'passable:true,'
+    if t['hsize'] * t['vsize'] != 1:
+      r = r + 'size:[%d,%d],' % (t['hsize'],t['vsize'])
+    if t['ontop']:
+      r = r + 'ontop:true'
+    return r + '}'
+  print "var tileflag=[", ','.join([reflag(t) for t in tileflag]), '];'
+
 
 if __name__ == "__main__":
   main()
