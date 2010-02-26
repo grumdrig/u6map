@@ -1,7 +1,4 @@
-<body onload="onLoad()">
-
-<img src="u6tiles+objects.png" id="tiles">
-
+<head>
 <style>
 
 .tile {
@@ -11,17 +8,50 @@
 td {
   text-align: left;
 }
+
+* {
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
+}  
+
+#over {
+  font-size: 96px;
+}
 </style>
 
-
 <script type="application/x-javascript" src="map.js"></script>
-<div id=extra></div>
+</head>
+
+<body onload="onLoad()">
+
+  <img src="u6tiles+objects.png" id="tiles" onmousemove="overtiles(event)">
+  <span id="over"></span>
+
+  <div id=extra></div>
 
 <script>
 // 8 for terrain tiles only
 // 32 for terrain & object tiles
 var grid_width = 32;
 
+MouseEvent.prototype.calcOffset = function () {
+  if (typeof this.offsetX == "undefined") {
+    this.offsetX = this.clientX, this.offsetY = this.clientY;
+    var obj = this.target;
+    do {
+      this.offsetX -= obj.offsetLeft;
+      this.offsetY -= obj.offsetTop;
+    } while ((obj = obj.offsetParent));
+  }
+}
+  
+
+function overtiles(event) {
+  event.calcOffset();
+  document.getElementById("over").innerText = Math.floor(event.offsetX / 16) + 
+                                              Math.floor(event.offsetY / 16) * grid_width;
+}
 
 function tileimage(index) {
   return "<canvas width=16 height=16 class=tile " + 
@@ -42,11 +72,15 @@ function onLoad() {
 
   p += "<table><tr><th>object<th>count";
   var histogram = {};
-  for (var i in objects) 
-    for (var n = 0; n < objects[i].length; ++n)
-      histogram[objects[i][n]] = (histogram[objects[i][n]] || 0) + 1;
+  for (var i in objects) {
+    for (var n = 0; n < objects[i].length; ++n) {
+      if (!histogram[objects[i][n]]) 
+           histogram[objects[i][n]] = [];
+      histogram[objects[i][n]].push(i);
+    }
+  }
   for (var i in histogram)
-    p += "<tr><td>" + tileimage(i) + "<td>" + histogram[i];
+    p += "<tr><td>" + tileimage(i) + "<td>" + histogram[i].length;
   p += "</table>";
 
   document.getElementById("extra").innerHTML = p;

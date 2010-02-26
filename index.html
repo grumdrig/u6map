@@ -160,18 +160,40 @@ function setpos(x,y) {
   renderMap(true);
 }
 
+var tick = 0;
+
+
+function animate(object_index, tweak) {
+  var frame = ((((tweak || 0) + object_index) * 14489 + tick) >> 4) & 3;
+  if (frame == 3) frame = 1;
+  if (1440 <= object_index && object_index < 1792 && (object_index & 3) != 3)
+    return (object_index & ~3) + frame;
+  else
+    return object_index;
+}
+
 function renderMap(evenIfNotAnimated) {
-  if (!evenIfNotAnimated) return;   // stub out for now
+  ++tick;
+  
 
   var con = can.getContext("2d");
   for (var j = 0; j < viewheight; ++j) {
     for (var i = 0; i < viewwidth; ++i) {
-      render(con, i, j, tile(i+pos[0], j+pos[1])); 
-
       var coord = (i + pos[0]) % 1024 + ((j + pos[1]) % 1024) * 1024;
 
-      if (objects[coord]) for (var o = objects[coord].length-1; o >= 0; --o)
-        render(con, i, j, objects[coord][o]);
+      if (!evenIfNotAnimated && !objects[coord]) 
+        continue;
+
+      render(con, i, j, tile(i+pos[0], j+pos[1])); 
+
+      if (objects[coord]) {
+        for (var o = objects[coord].length-1; o >= 0; --o)
+          if (!tileflag[objects[coord][o]].ontop)
+            render(con, i, j, animate(objects[coord][o], coord + o));
+        for (var o = objects[coord].length-1; o >= 0; --o)
+          if (tileflag[objects[coord][o]].ontop)
+            render(con, i, j, animate(objects[coord][o], coord + o));
+      }
 /*
       // Fade to black 
       var d = 0;
