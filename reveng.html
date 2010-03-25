@@ -26,6 +26,7 @@ td {
 <body onload="onLoad()">
 
   <img src="u6tiles+objects.png" id="tiles" onmousemove="overtiles(event)">
+  <canvas id="overcan" width="64" height="64"></canvas>
   <span id="over"></span>
 
   <div id=extra></div>
@@ -49,8 +50,21 @@ MouseEvent.prototype.calcOffset = function () {
 
 function overtiles(event) {
   event.calcOffset();
-  document.getElementById("over").innerText = Math.floor(event.offsetX / 16) + 
-                                              Math.floor(event.offsetY / 16) * grid_width;
+  var i = Math.floor(event.offsetX / 16);
+  var j = Math.floor(event.offsetY / 16);
+  document.getElementById("over").innerText = i + j * grid_width;
+  var tiles = document.getElementById("tiles");
+  var con = document.getElementById("overcan").getContext("2d");
+  var tiledim = 16;
+  var dtiledim = 64;
+  con.fillStyle = "rgb(255,255,255)";
+  con.fillRect(0,0,dtiledim,dtiledim);
+  con.drawImage(tiles,
+                tiledim * i,
+                tiledim * j,
+                tiledim, tiledim,
+                0, 0, dtiledim, dtiledim);
+
 }
 
 function tileimage(index) {
