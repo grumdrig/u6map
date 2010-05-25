@@ -1,0 +1,252 @@
+Ultima 6 Notes
+Author: Jim Ursetto
+$Id: u6notes.txt,v 1.7 2003/02/24 18:23:56 jim Exp $
+==============================
+
+This is a collection of notes on Ultima 6 I wrote while developing
+my world editor, u6edit.  It assumes you have familiarity with the 
+other U6 information out there, and gets right to the new stuff.
+
+In developing the editor, I used a lot of publically available information, 
+some of which I've included in the u6edit package.  Visit the following
+sites for the original documents and much more:
+
+http://www.geocities.com/nodling/
+http://www.it-he.org/u6_tools.htm
+http://red5.graf.torun.pl/~rackne/u6like.html
+
+basetile: object -> tile mapping
+--------------------------------
+(uncompressed)
+0x400 shorts, mapping object number (the index) to tile number (the short value).
+Tile is the -first- frame of the object.
+
+look.lzd: Object descriptions
+-----------------------------
+Format: record = uint16 tile_number, ASCIIZ string
+        file   = record, record, record, ..., dummy_short
+
+Tile numbers are sorted in ascending order, and may skip numbers.  When
+numbers are skipped, the next highest number with a valid record is used
+for the corresponding tile.  e.g. 0 Nothing, 1 grass, 4 swamp -> tile
+numbers 2, 3, 4 are all considered 'swamp'.  At the end of the file is a
+single short followed by nothing.
+
+More examples:
+egg         (object 0x14f) => basetile(0x14f) == 0x4e8.  Matches look.lzd's tile number 0x4e8.
+sea serpent (object 0x15a) => basetile(0x15a) == 0x514.  Matches look.lzd's tile number 0x51b,
+                                                         which is the last frame of the sea serpent.
+
+NOTE: you may not assume that look data is linked to the last frame of every object.
+Several objects can share the same description.
+
+Only objects that are stackable (can have quantity > 0, like gold coins) should
+(hopefully will) contain pluralizing modifiers such as "\s".
+
+objblk: Object blocks
+---------------------
+	objblks are arranged 1 per superchunk -- so there are 64 (8x8) surface 
+	chunks [a-h][a-h], plus five dungeon chunks [a-e]i.
+
+	There are 128x128 tiles / superchunk, so x coord can be represented in 7 bits.  
+	There are 1024x1024 tiles / world, so world x coordinate can be represented in 10 bits (0 - 0x3ff).
+
+	file format: 
+		uint16 num_objects;
+		struct objentry[num_objects];
+
+	objentry (according to obed):
+		struct objentry {     
+			uint8 status;
+			uint8  h;
+			uint8  d1;
+			uint8  d2;
+			uint16 type;
+			uint8  quantity;
+			uint8  quality;
+		};    
+
+	type: 
+		bits 0-9 (0x3ff): Object number.
+		bits 10-15      : Frame number.
+
+	status:
+		bit 0 (0x01): 0=stealing, 1=ok to take
+		bit 3 (0x08): object in a container [including eggs and readied items]
+		bit 4 (0x10): object in party inventory
+		bit 5 (0x20): seen eggs with this attribute: hatch once only?
+
+		'charges' have status 0x2b.  I've seen eggs with status 0x20 and 0x28 -- the
+		coordinates are as for regular eggs.  However, the charges with status 0x2b have an
+		unknown coordinate scheme.
+
+	h:
+		bits 0-7 (0xff): lower 8 bits of x coordinate
+	d1:
+		bits 0-1 (0x03): Upper 2 bits of x coordinate
+		bits 7-2 (0xFC): Lower 6 bits of y coordinate
+	d2:
+		bits 0-3 (0x0F): Upper 4 bits of y coordinate
+		bits 4-7 (0xF0): z coordinate [presumption, not verified]
+
+	quantity:
+		Represents number of objects for stackable objects, or number of charges for wands, etc.
+		Some containers (chests, crates, but not bags) have a quantity of 10.
+		If 0, this object is singular (non-stackable).
+
+	Objects are listed in ascending order: sweeping left to right, starting
+	at the top of the block.  So y is monotonically increasing, while x 
+	increases monotonically for identical values of y.
+	Overlapping objects (at the same coordinates) are listed from frontmost to rearmost.
+	This means they should be drawn in -reverse- order, assuming a painter's algorithm.
+
+	Objects in containers come directly after the container, and have status 0x08.  The first
+	object is the first to be removed when searching the container (and will wind up on the
+	bottom of the pile).
+
+	Containers:
+		Objects in containers (status == 0x08) have special coordinates:
+			x: the index of the parent container in the objblk.  
+			   0 being the first object, 1 the second, etc.
+			y: unknown.  I've seen values of 0, 0x40, 0x80, 0xC0, 0x2C0, 0x300, 0x340,
+			   0x380, which would indicate they increase in 64-byte quantities.  Can't
+			   work out how the game sets these.  However, setting y to -any- of those
+			   values is apparently acceptable to the game; any other value and the
+			   object will disappear.
+
+		Eggs are considered to be containers, containing the object to spawn.  The spawned
+		object data [coordinates, etc.] is not fully understood yet.
+
+		I set up a chest followed by gold (status 0) outside the chest, followed by a fence
+		(status 0x08) pointing into the chest.  [Did this by flipping the objects at 111,144.]
+		This was successful, meaning contained objects don't necessarily have to follow their containers.
+
+		Unfortunately, this pattern is not perfect.  First, objects must come somewhere
+		after their containers in the file, or they are ignored.  Upon next save, the object
+		is lost.  Second, there is a limit to how far apart they can be.  This seems to
+		occur when an object with unusual status (0x18, 0x31, 0x42) is placed between
+		them--objects afterward are no longer matched up.  These objects are also lost upon
+		save.  Third, the game always groups the objects together upon save.  This leads me
+		to believe the ability to separate objects from containers is never relied upon by
+		the game.  Therefore, it is highly recommended to group them together.
+
+		Any object can apparently be a container.  You can change a crate to a brazier, and
+		when looking at it the items will appear ("Searching here, you find...").  The item simply
+		needs to be followed with objects of status 0x08 (and the requisite coordinates).  Note:
+		crates, chests, barrels need to be opened (used) before they can be searched, but this is
+		not true for all containers (bags, braziers, pennants ;)
+		
+	Other objects:
+		Objects in party inventory have their own meaning for their coordinates [NPC coords].
+		The x coords for these seems to refer to NPC number, but is not verified.
+
+		Readied items [0x18] have also NPC coordinates.  NPC containers have status 0x10 (and therefore 
+		cannot be readied).  Items in NPC containers have status 0x08, with standard container coordinates.
+
+
+starpos.dat: Twinkling stars in the Introduction
+------------------------------------------------
+
+starpos.dat is a compressed file that evidently describes the
+position of the stars that twinkle in the U6 intro.
+
+Tim Carlsen provided me with the following information:
+
+"I've done some more research, and I'm now pretty sure that the 
+uncompressed starpos.dat has the following structure:
+
+struct uncompressed_starpos_dat {
+	uint16 x_coordinates[0x190];
+	uint16 y_coordinates[0x190];
+	uint16 star_colors[0x190];
+};
+
+There are 0x190 twinkling stars (the background image probably has more, but
+not all of them twinkle).  Ultima 6 makes each star briefly flash white and
+then returns it to its original color, which is stored in star_colors[i].  
+The star colors are stored as words, though the upper byte is always zero
+(because mode 0x13 pixels are bytes)."
+
+
+tileflag: Information on various tiles.
+---------------------------------------
+
+		From 0x000 - 0x7FF, there is one byte for each tile:
+			bit 0 (0x01): may have something to do with shoreline -- unknown
+			bit 1 (0x02): 0 for passable, 1 for impassable 
+
+		The moongates are 0x40; the 0x40 doesn't do anything I can see.
+
+		When I set an object (e.g. chain coif) to 0xff, it becomes impossible to Get ("Not possible") and 
+		it is no longer searched when you look at it.  Neither is true when only set to 0x02.
+
+		Again starting at 0x800, each tile has a byte allocated to it:
+			bit 4 (0x10): tile is above any other tiles at this location
+			bit 4 (0x20): unknown, but it's pretty common
+			bit 7 (0x40): object vertical size (0 for 1 tile, 1 for 2 tiles)
+			bit 8 (0x80): object horizontal size (same)
+
+		Bits 7 and 8 control object size.  When objects have size > 1, the other tiles are
+		found consecutive and previous to the main tile.  Render them right-to-left,
+		bottom-to-top, subtracting one from the tile number each time.  The object
+		coordinates specify the bottom right corner of the object.
+
+		Setting a secondary tile (one drawn when size > 1) to 0x10 makes it
+		higher (above other objects).  This is used in pillars, for example.
+		The exact effects and implementation of this stacking is unknown.
+
+		Then, there's some unknown stuff between 0x1000 and 0x13ff.
+
+		Then, from 0x1400 - 0x1c00, there's another 2048 tile bytes:
+			bit 0: unknown; maptiles lava 0xdd, 0xde, 0xdf have this set.
+			bit 6, 7 (0xC0): the article prepended to the object description
+				00 = no article
+				01 = article is "a"
+				10 = article is "an"
+				11 = article is "the"
+
+		When object quantity is 0, the article is used.  When 1 or above, the number is
+		usually used in place of the article.  However, quantity is ignored for
+		pluralization purposes (apparently) if the description does not contain a
+		plural modifier (chests, mirrors).  Experiment:  try setting a plural modifier 
+		on the name of a non-plural object with quantity > 0, such as lightning wand or crate.
+
+		The four object floor tiles from 0x21c - 0x21f (offsets 0x161c-0x161f) have bits 4 and 5 (0x30) set.
+			
+		For maptiles (0x1400-0x15ff), I've only seen 0x40, 0x80, 0xC0, and 0x01 as values.
+
+		The weight of items may be in tileflag, but I have not found it yet.  Certainly it
+		tells you which objects are immovable. 
+
+		tileflag definitely does not contain: ability of objects to stack; what type an
+		object is (book, container, weapon); weapons/armour stats.  The equivalent of
+		U7 usecode appears to be hardcoded into the game.
+
+Miscellaneous
+-------------
+palette:
+	The missing intervals from u6tech.txt are:
+		0xF0 - 0xF3: purple braziers, force fields
+		0xF8 - 0xFB: poison fields
+
+books:
+	book number = object quality - 1
+		quality = 0 is considered to be a regular item.  There's one such book in the Inn in Paws.
+		   When looked at, it says "Thou dost see a book.  It weighs 1.0 stones.  
+		   Searching here, you find nothing."
+	
+weapon and armour statistics:
+	U6 hardcodes a lot of its data in the game executable, including weapon and armour statistics.
+	If you use an unpacker on game.exe, you can find the following (at least in my version):
+
+	0x32521 - 0x32528 are the 8 helmet damage absorption points.
+	0x32529 - 0x32530 are the 8 shield damage absorption points 
+	0x32531 - 0x32537 are the 8 armour damage absorption points.
+
+	The spiked collar (which absorbs 2 points) is not found yet.  (The next three bytes are 01 02 05,
+	which do not correspond to the next three items: collar 2, guild belt 0, gargoyle belt 0.)
+
+	0x325bc - 0x325ca sling - halberd damage infliction points
+	0x325cb - 0x325cb boomerang, crossbow damage infliction points (glass sword skipped)
+
+
